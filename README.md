@@ -5,7 +5,7 @@ A role-based access control privilege reporting tool is required to help adminis
 permissions in a large organization. Permissions are defined as strings assigned to Roles that grant Users
 privilege to perform a specific task on a resource. Some of the questions administrators need to answer are:
 
-    "What are Dave's permissions?"
+    "What are dave's permissions?"
     "Who can reboot this host?"
     "What can the admin group do?"
     "Can dave write to this directory?"
@@ -18,9 +18,11 @@ Privilege Command Line
 ======================
 
 NAME
-    privilege - generate a report of from three input csv files
+
+    privilege - generates a report of from three input csv files
 
 SYNOPSIS
+
     python privilege [...] 
 
 DESCRIPTION
@@ -41,12 +43,12 @@ DESCRIPTION
         5. Role Permissions
         6. Permission Roles
     
-    These tables list all users. Other limited repots are possible.
+    These tables list all users. Other limited reports are possible.
     (In version 2 a report focused on a single user can also be printed)
 
-Implementations
-================
-A python 2.7 command line and a Django 1.11 implementation will explore alternate solutions. Django's support for interactive presentation is thought to allow larger data sets to be reduced for display, although the initial  version will be static. Problems and solutions will be identified in each version and addressed in later versions. 
+Development plans
+==============+==
+A python 2.7 command line and a Django 1.11 implementation will explore alternate solutions. Django's support for interactive presentation will allow larger data sets to be reduced for display although the initial version will be static. Problems and solutions will be identified in each version and addressed in later releases. 
 
 Command Line functions
 
@@ -70,19 +72,19 @@ Estimates: 2 days ea. 10 days total
 
 Future Development 
 ==================
-These features have been gathered from feedback in the inital version.
+These features have been gathered from feedback from the inital version.
 - Use data from genisys users and groups  Estimate: 1 day.
 - Explore any structure to the roles and permission strings Estimate: 2 days.
-  Roles and permissions have a useful structure for examples: "HOST:SERVICE:API:permission" or "PARENT:CHILD" we could make use of this ordering.
+  Roles and permissions have a useful structure for example: "HOST:SERVICE:API:permission" or "PARENT:CHILD" 
 - Add a way to filter inputs. Estimate: 1 day.
 - Add role/group descriptions. Estimate: 1 day.
   In a large set of Roles or Permissions, a description could help users understand the names.
-- Can Django edit and save the data? Estimate: 2 days.
+- Have Django edit and save the data. Estimate: 2 days.
   
   
 History
 =======
-In version 0
-- Indiviual permssions were suported, however that was removed.
+In version 0:
+- Individual permissions were supported, however, that was removed.
 - ID's were required to be numbers, however that was removed.
 
