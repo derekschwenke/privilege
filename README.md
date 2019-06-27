@@ -47,7 +47,7 @@ DESCRIPTION
     (In version 2 a report focused on a single user can also be printed)
 
 Development plans
-==============+==
+=================
 A python 2.7 command line and a Django 1.11 implementation will explore alternate solutions. Django's support for interactive presentation will allow larger data sets to be reduced for display although the initial version will be static. Problems and solutions will be identified in each version and addressed in later releases. 
 
 Command Line functions
@@ -73,9 +73,9 @@ Estimates: 2 days ea. 10 days total
 Future Development 
 ==================
 These features have been gathered from feedback from the inital version.
-- Use data from genisys users and groups  Estimate: 1 day.
-- Explore any structure to the roles and permission strings Estimate: 2 days.
-  Roles and permissions have a useful structure for example: "HOST:SERVICE:API:permission" or "PARENT:CHILD" 
+- Use data from genisys users and roles  Estimate: 1 day.
+- Explore structure to the roles and permission strings Estimate: 2 days.
+  Roles and permissions can make use a structure for example: "HOST:SERVICE:API:permission" or "PARENT:CHILD".
 - Add a way to filter inputs. Estimate: 1 day.
 - Add role/group descriptions. Estimate: 1 day.
   In a large set of Roles or Permissions, a description could help users understand the names.
