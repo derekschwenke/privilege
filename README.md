@@ -14,6 +14,11 @@ ASSUMPTIONS
 
 Roles, Permissions and Users are assumed to be strings. Permission strings must be additive and positive. 
 
+# Privilege Web Interface #
+
+See [privweb/README.md]
+
+
 Privilege Command Line
 ======================
 
