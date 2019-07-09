@@ -4,6 +4,9 @@ from __future__ import unicode_literals
 from django.contrib import admin
 from .models import User, Permission, Role
 
+admin.site.site_header = "Genhub Privileges"
+admin.site.site_title = "Genhub Privileges"
+
 # Register your models here.
 class UserAdmin(admin.ModelAdmin):
     fields=[
