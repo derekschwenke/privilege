@@ -1,5 +1,7 @@
 from collections import defaultdict
 import sys
+import sqlite3
+import json
 
 """
 This Privilege reporting program scans 3 input files and generates a report. It allows the data to be edited and saved.
@@ -35,6 +37,9 @@ admin, read, write, execute
 
 Output:
 A report of 6 tables, and user focused tables.
+Data error checks (duplicate, missing values).
+
+See readme at 
 """
 
 
@@ -57,6 +62,11 @@ class User:
 
 class Privileges:
     """ Privileges reporting """
+    def clear(self):
+        self.allPermissions = set()
+        self.permissionsForRole = defaultdict(set)
+        self.usersHaveRole = defaultdict(set)
+        self.userByID = dict()
 
     def readCSV(self, file):
         with open(file, 'r') as f:
@@ -68,9 +78,129 @@ class Privileges:
             f.write("\n".join([", ".join(line) for line in lines]))
 
     def read(self):
+        self.clear()
         self.users_file = self.readCSV("users.txt")
         self.permissions_file = self.readCSV("permissions.txt")
         self.roles_file = self.readCSV("roles.txt")
+        self.load()
+
+    def writejson(self):
+        d = {}
+        d['users'] = [ { "acct_name" : user.id, "first_name" : user.first, "last_name" : user.last} for user in sorted(self.userByID.values(), key=User.get_key) ]
+        d['roles'] = [ { "role_name" : role , "users" : list(users)} for role, users in self.usersHaveRole.iteritems() ]
+        d['permissions'] = [ { "role_name" : role , "permissions" : list(permissions)} for role, permissions in self.permissionsForRole.iteritems() ]
+        with open('privilege.json', 'w') as f:
+            json.dump(d, f, indent=2, sort_keys=True)
+
+    def writeurp(self):
+        uix = {}
+        pix = {}
+        d = []
+        j = 0
+        for i, user in enumerate(self.userByID.values(), start=1):
+            uix[user.id] = i
+            m = { "model" : "priv.user", "pk" : i }
+            m["fields"] = { "acct_name" : user.id, "first_name" : user.first, "last_name" : user.last }
+            d.append(m)
+        for i, p in enumerate(self.allPermissions, start=1):
+            pix[p] = i
+            m = { "model" : "priv.permission", "pk" : i }
+            m["fields"] = {"permission_name" : p}
+            d.append(m)
+        i = 0
+        for role, permissions in self.permissionsForRole.iteritems():
+            j = j + 1
+            ui = [ uix[uid] for uid in self.usersHaveRole[role] ]
+            pi = [ pix[permission] for permission in permissions ]
+            m = { "model" : "priv.role", "pk" : j }
+            m["fields"] = { "role_name" : role, "users" : ui, "permissions" : pi }
+            d.append(m)
+        with open('urp.json', 'w') as f:
+            json.dump(d, f, indent=2 )
+
+
+    def readjson(self, filename = None):
+        if filename == None:
+            filename = "privilege.json"
+            self.clear()
+        with open(filename, "r") as f:
+            d = json.load(f)
+            self.users_file = [[u["acct_name"],u["first_name"],u["last_name"]] for u in d["users"]]
+            self.roles_file = [ [r["role_name"]] + r["users"] for r in d["roles"]]
+            self.permissions_file = [ [r["role_name"]] + r["permissions"] for r in d["permissions"]]
+        self.load()
+
+    def writesql(self):
+        conn = sqlite3.connect('sqlite3.db')
+        conn.execute("DROP TABLE IF EXISTS priv_user")
+        conn.execute("DROP TABLE IF EXISTS priv_role")
+        conn.execute("DROP TABLE IF EXISTS priv_permission")
+        conn.execute('''CREATE TABLE IF NOT EXISTS priv_user
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 acct_name        CHAR(24) NOT NULL,
+                 first_name       CHAR(24) NOT NULL,
+                 last_name        CHAR(24) NOT NULL);''')
+
+        conn.execute('''CREATE TABLE IF NOT EXISTS priv_role
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 role_name        CHAR(80) NOT NULL);''')
+
+        conn.execute('''CREATE TABLE IF NOT EXISTS priv_permission
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 permission_name        CHAR(80) NOT NULL);''')
+
+        conn.execute('''CREATE TABLE IF NOT EXISTS priv_role_users
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 role_id       INTEGER NOT NULL,
+                 user_id       INTEGER NOT NULL);''')
+
+        conn.execute('''CREATE TABLE IF NOT EXISTS priv_role_permissions
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 role_id       INTEGER NOT NULL,
+                 permission_id       INTEGER NOT NULL);''')
+        #  s_ sorted lists required since SQL uses index and python uses Strings
+        s_roles = sorted(self.usersHaveRole.keys())
+        s_perms = sorted(self.allPermissions)
+        s_uid = sorted(self.userByID.values(), key=User.get_key)
+        for user in sorted(self.userByID.values(), key=User.get_key):
+            conn.execute("INSERT INTO priv_user (acct_name, first_name, last_name) VALUES ('{}', '{}', '{}')".format(user.id,user.first,user.last))
+        for role in sorted(self.usersHaveRole):
+            conn.execute("INSERT INTO priv_role (role_name) VALUES ('{}')".format(role))
+        for priv in sorted(self.allPermissions):
+            conn.execute("INSERT INTO priv_permission (permission_name) VALUES ('{}')".format(priv))
+
+        for rx, role in enumerate(s_roles):
+            for ux in self.usersHaveRole[role]:
+                conn.execute("INSERT INTO priv_role_users (role_id, user_id) VALUES ('{}', '{}')".format(rx + 1,ux))
+        for rx, role in enumerate(s_roles):
+            for perm in self.permissionsForRole[role]:
+                px = 1 + s_perms.index(perm)
+                conn.execute("INSERT INTO priv_role_permissions (role_id, permission_id) VALUES ('{}', '{}')".format(rx + 1,px))
+
+        conn.commit()
+        conn.close()
+
+    def readsql(self):
+        r_has_u = defaultdict(set)  # Role has Users
+        r_has_p = defaultdict(set)  # Role has Permissions
+        self.clear()
+        conn = sqlite3.connect('sqlite3.db')
+        self.users_file = [u for u in conn.execute("SELECT acct_name, first_name, last_name from priv_user") ]
+       #user_str = ["None0"] + [u[0] for u in conn.execute("SELECT acct_name from priv_user")]
+        role_str = ["None0"] + [r[0] for r in conn.execute("SELECT role_name from priv_role")]
+        perm_str = ["None0"] + [p[0] for p in conn.execute("SELECT permission_name from priv_permission")]
+        for res in conn.execute("SELECT role_id, user_id from priv_role_users"):
+            rx,u = res[:2]
+            r = role_str[rx]
+            r_has_u[r].add(str(u))
+        for res in conn.execute("SELECT role_id, permission_id from priv_role_permissions"):
+            r,p = res[:2]
+            r_has_p[role_str[r]].add(perm_str[p])
+        #self.roles_file = [[u] + list(u_has_r[u]) for u in u_has_r ]
+        self.roles_file = [[r] + list(r_has_u[r]) for r in r_has_u ]
+        self.permissions_file = [[r] + list(r_has_p[r])  for r in r_has_p ]
+        conn.close()
+        self.load()
 
     def write(self):
         self.writeCSV("users.out.txt", [[user.id, user.first, user.last] for user in sorted(self.userByID.values(), key=User.get_key)])
@@ -137,23 +267,57 @@ class Privileges:
         for p in sorted(self.allPermissions):
             print "{:16} : {}".format(p, " ".join(sorted(
                 [r for r in self.permissionsForRole.keys() if p in self.permissionsForRole[r]])))
+
         print "\n============== User reports:"
         for u in sorted(self.userByID.values(), key=User.get_key):
             print "{:28}".format(u)
             for p in sorted(u.role_permissions):
-                print "    {:16} : {}".format(p,
-                                              " ".join(sorted([r for r in u.roles if p in self.permissionsForRole[r]])))
+                print "    {:16} : {}".format(p," ".join(sorted([r for r in u.roles if p in self.permissionsForRole[r]])))
+
+    def search(self, query):
+        count=0
+        for user in sorted(self.userByID.values(), key=User.get_key):
+            if query in user.first or query in user.last or query in user.id:
+                print "{:28}".format(user)
+                count += 1
+        if count: print count, "users found."
+        else: print "No users found."
+        print ""
+        for r in sorted(self.permissionsForRole.keys()):
+            if query in r:
+                print "{:16}".format(r)
+        print ""
+        for p in sorted(self.allPermissions):
+            if query in p:
+                print "{:16}".format(p)
+
 
     def scan(self):
         while True:
             line = raw_input('Command: ')
-            if not line or line == "end" or line == "exit" or line == "quit":
+            if line == "end" or line == "exit" or line == "quit":
                 break
             words = line.split(" ")
             if words[0] == "help":
                 print "quit, read, write, report, create, add, delete."
             elif words[0] == "report":
                 self.report()
+            elif words[0] == "clear":
+                 self.clear()
+            elif words[0] == "read":
+                self.read()
+            elif words[0] == "readsql":
+                self.readsql()
+            elif words[0] == "writesql":
+                self.writesql()
+            elif words[0] == "mergejson":
+                self.readjson(words[1])
+            elif words[0] == "readjson":
+                self.readjson()
+            elif words[0] == "writejson":
+                self.writejson()
+            elif words[0] == "writeurp":
+                 self.writeurp()
             elif words[0] == "write":
                 self.write()
             elif line.startswith("create user"):
@@ -172,17 +336,13 @@ class Privileges:
                 self.allPermissions.add(set(line[3:]))
             elif line.startswith("delete permission"):
                 self.allPermissions.discard((words[2]))
+            elif line.startswith("search"):
+                self.search(words[1])
             else:
                 print "No command:", line
 
     def __init__(self):
-        self.allPermissions = set()
-        self.permissionsForRole = defaultdict(set)
-        self.usersHaveRole = defaultdict(set)
-        self.userByID = dict()
-
         self.read()
-        self.load()
         self.report()
         self.write()
 
