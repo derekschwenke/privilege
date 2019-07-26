@@ -1,0 +1,15 @@
+<h1>User search results | Genhub Privileges</h1>
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css" />
+<form action="" method="get">
+  <input name="q" type="text" placeholder="Search...">
+</form>
+
+<ul>
+  {% for u in object_list %}
+    <li>
+      {{ u.acct_name }}, {{ u.first_name }}, {{ u.last_name }}    <a href="../detail/{{u.id}}/">Detail</a> <a href="../../admin/priv/user/{{u.id}}/change/">Change</a>
+    </li>
+  {% endfor %}
+</ul>
+
+{{ object_list|length }} items found.

@@ -1,0 +1,25 @@
+<h1>Permission User | Genhub Privileges</h1>
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css" />
+
+
+<form action="{% url 'permission_user' %}" method="get">
+  <input name="q" type="text" placeholder="Search...">
+</form>
+
+
+<ul>
+  {% for p in permission_list %}
+    <li>
+      {{ p }} 
+      {% for u in p.users %}
+		, {{ u.acct_name }}, {{ u.first_name }}, {{ u.last_name }} 
+	  {% endfor %}
+    </li>
+  {% endfor %}
+</ul>
+
+{{ permission_list|length }} permissions found.
+
+
+
+

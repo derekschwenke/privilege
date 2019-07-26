@@ -1,0 +1,25 @@
+<h1>User Role | Genhub Privileges</h1>
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css" />
+
+
+<form action="{% url 'user_role' %}" method="get">
+  <input name="q" type="text" placeholder="Search...">
+</form>
+
+
+<ul>
+  {% for u in user_list %}
+    <li>
+      {{ u }} 
+      {% for r in u.roles %}
+		, {{ r }}
+	  {% endfor %}
+    </li>
+  {% endfor %}
+</ul>
+
+{{ user_list|length }} users found.
+
+
+
+

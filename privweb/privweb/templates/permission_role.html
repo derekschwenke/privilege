@@ -1,0 +1,25 @@
+<h1>Permission Role | Genhub Privileges</h1>
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css" />
+
+
+<form action="{% url 'permission_role' %}" method="get">
+  <input name="q" type="text" placeholder="Search...">
+</form>
+
+
+<ul>
+  {% for p in permission_list %}
+    <li>
+      {{ p }} 
+      {% for r in p.roles %}
+		, {{ r }}
+	  {% endfor %}
+    </li>
+  {% endfor %}
+</ul>
+
+{{ permission_list|length }} permissions found.
+
+
+
+

@@ -1,0 +1,18 @@
+<h1>User details {{ user_object }} | Genhub Privileges</h1>
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css" />
+
+
+<ul>
+  {% for p in permission_list %}
+    <li>
+      {{ p }} 
+      {% for r in p.roles %}
+		, {{ r }}
+	  {% endfor %}
+    </li>
+  {% endfor %}
+</ul>
+
+{{ permission_list|length }} permissions.
+
+
