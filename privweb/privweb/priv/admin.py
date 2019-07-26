@@ -10,7 +10,7 @@ admin.site.site_title = "Genhub Privileges"
 # Register your models here.
 class UserAdmin(admin.ModelAdmin):
     fields=[
-        'acctname',
+        'acct_name',
         'first_name',
         'last_name'
     ]
